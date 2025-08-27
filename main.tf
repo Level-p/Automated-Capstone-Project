@@ -26,7 +26,7 @@ resource "aws_vpc" "vpc" {
   instance_tenancy = "default"
 
   tags = {
-    Name = "Set25-vpc"
+    Name = "steven-vpc"
   }
 }
 
@@ -37,7 +37,7 @@ resource "aws_subnet" "public_subnet_1" {
   availability_zone       = "eu-west-3a"
   map_public_ip_on_launch = true
   tags = {
-    Name = "set25-public-subnet-1"
+    Name = "steven-public-subnet-1"
   }
 }
 
@@ -47,7 +47,7 @@ resource "aws_subnet" "public_subnet_2" {
   availability_zone       = "eu-west-3b"
   map_public_ip_on_launch = true
   tags = {
-    Name = "set25-public-subnet-2"
+    Name = "steven-public-subnet-2"
   }
 }
 
@@ -57,7 +57,7 @@ resource "aws_subnet" "private_subnet_1" {
   availability_zone       = "eu-west-3a"
   map_public_ip_on_launch = true
   tags = {
-    Name = "set25-private-subnet-1"
+    Name = "steven-private-subnet-1"
   }
 }
 
@@ -67,15 +67,15 @@ resource "aws_subnet" "private_subnet_2" {
   availability_zone       = "eu-west-3b"
   map_public_ip_on_launch = true
   tags = {
-    Name = "set25-private-subnet-2"
+    Name = "steven-private-subnet-2"
   }
 }
 # Create an Internet Gateway
-resource "aws_internet_gateway" "igw-set25" {
+resource "aws_internet_gateway" "igw-steven" {
   vpc_id = aws_vpc.vpc.id
 
   tags = {
-    Name = "igw-set25"
+    Name = "igw-steven"
   }
 }
 
@@ -85,11 +85,11 @@ resource "aws_route_table" "private_rt" {
 
   route {
     cidr_block = "0.0.0.0/0"
-    gateway_id = aws_nat_gateway.set25-nat-gw.id
+    gateway_id = aws_nat_gateway.steven-nat-gw.id
   }
 
   tags = {
-    Name = "set25-pri-rt-1"
+    Name = "steven-pri-rt-1"
   }
 }
 
@@ -99,11 +99,11 @@ resource "aws_route_table" "public_rt" {
 
   route {
     cidr_block = "0.0.0.0/0"
-    gateway_id = aws_internet_gateway.igw-set25.id
+    gateway_id = aws_internet_gateway.igw-steven.id
   }
 
   tags = {
-    Name = "set25-public-rt-1"
+    Name = "steven-public-rt-1"
   }
 }
 
@@ -130,26 +130,26 @@ resource "aws_route_table_association" "pub_assoc-2" {
 }
 
 # Elastic IP
-resource "aws_eip" "set25-eip" {
+resource "aws_eip" "steven-eip" {
   domain = "vpc"
   tags = {
-    Name = "set25-eip"
+    Name = "steven-eip"
   }
 }
 
 # Create Nat Gateway
-resource "aws_nat_gateway" "set25-nat-gw" {
-  allocation_id = aws_eip.set25-eip.id
+resource "aws_nat_gateway" "steven-nat-gw" {
+  allocation_id = aws_eip.steven-eip.id
   subnet_id     = aws_subnet.public_subnet_1.id
   tags = {
-    Name = "set25-NAT"
+    Name = "steven-NAT"
   }
-  depends_on = [aws_internet_gateway.igw-set25]
+  depends_on = [aws_internet_gateway.igw-steven]
 }
 
 #creating securitygroup
-resource "aws_security_group" "set25-ec2_sg" {
-  name   = "set25-ec2-sg"
+resource "aws_security_group" "steven-ec2_sg" {
+  name   = "steven-ec2-sg"
   vpc_id = aws_vpc.vpc.id
 
   ingress {
@@ -183,12 +183,12 @@ resource "aws_security_group" "set25-ec2_sg" {
     cidr_blocks = ["0.0.0.0/0"]
   }
   tags = {
-    Name = "set25-ec2-sg"
+    Name = "steven-ec2-sg"
   }
 }
 
-resource "aws_security_group" "set25-rds" {
-  name   = "set25-rds-sg"
+resource "aws_security_group" "steven-rds" {
+  name   = "steven-rds-sg"
   vpc_id = aws_vpc.vpc.id
 
   ingress {
@@ -205,7 +205,7 @@ resource "aws_security_group" "set25-rds" {
     cidr_blocks = ["0.0.0.0/0"]
   }
   tags = {
-    Name = "set25-rds-sg"
+    Name = "steven-rds-sg"
   }
 }
 
@@ -216,11 +216,11 @@ resource "tls_private_key" "key" {
 
 resource "local_file" "key" {
   content         = tls_private_key.key.private_key_pem
-  filename        = "set25-key"
+  filename        = "steven-key"
   file_permission = "600"
 }
 resource "aws_key_pair" "key" {
-  key_name   = "set25-pub-key"
+  key_name   = "steven-pub-key"
   public_key = tls_private_key.key.public_key_openssh
 }
 
@@ -257,10 +257,10 @@ resource "aws_instance" "wordpress_server" {
   instance_type               = var.instance_type
   associate_public_ip_address = true
   subnet_id                   = aws_subnet.public_subnet_1.id
-  depends_on                  = [null_resource.checkov_scan]
+  # depends_on                  = [null_resource.checkov_scan]
   vpc_security_group_ids = [
-    aws_security_group.set25-ec2_sg.id,
-    aws_security_group.set25-rds.id
+    aws_security_group.steven-ec2_sg.id,
+    aws_security_group.steven-rds.id
   ]
 
   iam_instance_profile = aws_iam_instance_profile.wordpress_instance_profile.name
@@ -271,14 +271,14 @@ resource "aws_instance" "wordpress_server" {
   # depends_on = [null_resource.pre_scan]
 
   tags = {
-    Name    = "set25-wordpress-server"
+    Name    = "steven-wordpress-server"
     Project = "WordPressImageSharing"
   }
 }
 
 # Amazon machine image (AMI) for the backend instance
-resource "aws_ami_from_instance" "set-custom_ami" {
-  name                    = "set25-custom-ami"
+resource "aws_ami_from_instance" "steven-custom_ami" {
+  name                    = "steven-custom-ami"
   source_instance_id      = aws_instance.wordpress_server.id
   snapshot_without_reboot = true
   depends_on              = [aws_instance.wordpress_server, time_sleep.ami-sleep]
@@ -361,11 +361,10 @@ resource "aws_db_instance" "wordpress_db" {
   password                = local.db_cred.password # DB password
   parameter_group_name    = "default.mysql8.0"
   db_subnet_group_name    = aws_db_subnet_group.wordpress_db_subnet.name
-  vpc_security_group_ids  = [aws_security_group.set25-rds.id]
+  vpc_security_group_ids  = [aws_security_group.steven-rds.id]
   skip_final_snapshot     = true  #Whether to skip the final snapshot before deletion
   deletion_protection     = false #Prevent accidental deletion
   publicly_accessible     = false
-  backup_retention_period = 3             #days to keep automated RDS backups
   backup_window           = "03:00-04:00" #backups will happen between...
   db_name                 = var.db_name
 
@@ -379,7 +378,7 @@ resource "aws_lb" "wordpress_alb" {
   name               = "wordpress-alb"
   internal           = false
   load_balancer_type = "application"
-  security_groups    = [aws_security_group.set25-ec2_sg.id]
+  security_groups    = [aws_security_group.steven-ec2_sg.id]
   subnets            = [aws_subnet.public_subnet_1.id, aws_subnet.public_subnet_2.id]
 
   enable_deletion_protection = false
@@ -445,9 +444,9 @@ resource "aws_lb_target_group_attachment" "lb_attachment_https" {
 }
 
 # launch template
-resource "aws_launch_template" "set25-launch-template" {
-  name_prefix   = "set25-lt"
-  image_id      = aws_ami_from_instance.set-custom_ami.id
+resource "aws_launch_template" "steven-launch-template" {
+  name_prefix   = "steven-lt"
+  image_id      = aws_ami_from_instance.steven-custom_ami.id
   instance_type = "t2.medium"
   key_name      = aws_key_pair.key.id
   iam_instance_profile {
@@ -455,7 +454,7 @@ resource "aws_launch_template" "set25-launch-template" {
   }
   network_interfaces {
     associate_public_ip_address = true
-    security_groups             = [aws_security_group.set25-ec2_sg.id]
+    security_groups             = [aws_security_group.steven-ec2_sg.id]
   }
   user_data = base64encode(local.wordpress_script)
 }
@@ -467,12 +466,12 @@ resource "aws_autoscaling_policy" "scale_out" {
   adjustment_type    = "ChangeInCapacity"
   cooldown           = 300
 
-  autoscaling_group_name = aws_autoscaling_group.set25-auto-scaling-group.name
+  autoscaling_group_name = aws_autoscaling_group.steven-auto-scaling-group.name
 }
 
 # Autoscaling group
-resource "aws_autoscaling_group" "set25-auto-scaling-group" {
-  name                      = "set25-auto-scaling-group"
+resource "aws_autoscaling_group" "steven-auto-scaling-group" {
+  name                      = "steven-auto-scaling-group"
   desired_capacity          = 2
   max_size                  = 5
   min_size                  = 1
@@ -482,7 +481,7 @@ resource "aws_autoscaling_group" "set25-auto-scaling-group" {
 
 
   launch_template {
-    id      = aws_launch_template.set25-launch-template.id
+    id      = aws_launch_template.steven-launch-template.id
     version = "$Latest"
   }
 
@@ -535,7 +534,7 @@ resource "aws_cloudwatch_metric_alarm" "high_cpu" {
 
   alarm_description   = "Triggers when CPU exceeds 70% utilization"
   dimensions = {
-    AutoScalingGroupName = aws_autoscaling_group.set25-auto-scaling-group.name
+    AutoScalingGroupName = aws_autoscaling_group.steven-auto-scaling-group.name
   }
 
   alarm_actions = [
@@ -552,7 +551,7 @@ resource "aws_cloudwatch_metric_alarm" "high_cpu" {
 #   bucket = aws_s3_bucket.log-bucket.id
 #   alarm_description   = "This alarm triggers when CPU exceeds 70%"
 #   dimensions = {
-#     AutoScalingGroupName = aws_autoscaling_group.set25-auto-scaling-group.name
+#     AutoScalingGroupName = aws_autoscaling_group.steven-auto-scaling-group.name
 #   }
 
 #   alarm_actions = [aws_autoscaling_policy.scale_out.arn]
@@ -624,10 +623,10 @@ resource "aws_s3_bucket_policy" "code_policy" {
 
 # # Bucket 1: For Logs
 resource "aws_s3_bucket" "logs_bucket" {
-  bucket = "set25-logs-bucket"
+  bucket = "steven-logs-bucket"
 
   tags = {
-    Name        = "set25-logs"
+    Name        = "steven-logs"
     Environment = "production"
     Purpose     = "log-storage"
   }
@@ -635,10 +634,10 @@ resource "aws_s3_bucket" "logs_bucket" {
 
 # # Bucket 2: For Code Storage
 resource "aws_s3_bucket" "code-bucket" {
-  bucket = "set25-code-bucket"
+  bucket = "steven-code-bucket"
 
   tags = {
-    Name        = "set25-code"
+    Name        = "steven-code"
     Environment = "production"
     Purpose     = "code-storage"
   }
@@ -646,10 +645,10 @@ resource "aws_s3_bucket" "code-bucket" {
 
 # # Bucket 3: For Image Sharing App
 resource "aws_s3_bucket" "media-bucket" {
-  bucket = "set25-media-bucket"
+  bucket = "steven-media-bucket"
 
   tags = {
-    Name        = "set25-images"
+    Name        = "steven-images"
     Environment = "production"
     Purpose     = "image-storage"
   }
@@ -657,8 +656,8 @@ resource "aws_s3_bucket" "media-bucket" {
 
 
 #Cloudwatch dashboard
-resource "aws_cloudwatch_dashboard" "set25_dashboard" {
-  dashboard_name = "Set25-Infra-Dashboard"
+resource "aws_cloudwatch_dashboard" "steven_dashboard" {
+  dashboard_name = "steven-Infra-Dashboard"
   dashboard_body = jsonencode({
     widgets = [
       {
@@ -669,7 +668,7 @@ resource "aws_cloudwatch_dashboard" "set25_dashboard" {
         height = 6,
         properties = {
           metrics = [
-            [ "AWS/EC2", "CPUUtilization", "AutoScalingGroupName", aws_autoscaling_group.set25-auto-scaling-group.name ]
+            [ "AWS/EC2", "CPUUtilization", "AutoScalingGroupName", aws_autoscaling_group.steven-auto-scaling-group.name ]
           ],
           period = 300,
           stat   = "Average",
@@ -682,7 +681,7 @@ resource "aws_cloudwatch_dashboard" "set25_dashboard" {
 
 # Create SNS Topic
 resource "aws_sns_topic" "alert_topic" {
-  name = "set25-alert-topic"
+  name = "steven-alert-topic"
 }
 
 # Create SNS Subscription (email)
@@ -709,19 +708,14 @@ resource "aws_sns_topic_policy" "sns_policy" {
   })
 }
 # Hosted Zone for Route 53
-resource "aws_route53_zone" "set-25_zone" {
-  name = "imageshareus.com"
-  comment = "Hosted zone for example.com"
-
-  vpc {
-    vpc_id = aws_vpc.vpc.id
-  }
-
+data "aws_route53_zone" "steven_zone" {
+  name = "steven12.space"
+  private_zone = false
 }
 
-resource "aws_route53_record" "set25_zone_record" {
-  zone_id = aws_route53_zone.set-25_zone.zone_id
-  name    = "route53-imageshareus.com"
+resource "aws_route53_record" "steven_zone_record" {
+  zone_id = data.aws_route53_zone.steven_zone.zone_id
+  name    = "steven12.space"
   type    = "A"
 
   alias {
