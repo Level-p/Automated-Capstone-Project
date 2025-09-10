@@ -3,22 +3,22 @@ locals {
 }
 
 #checkov
-resource "null_resource" "checkov_scan" {
-  provisioner "local-exec" {
-    command     = "./checkov_scan.sh"
-    interpreter = ["bash", "-c"]
-  }
-  provisioner "local-exec" {
-    when    = destroy
-    command = "rm -f checkov_output.json"
-  }
-  triggers = {
-    always_run = timestamp()
-  }
-}
-output "checkov_scan_status" {
-  value = "checkov scan completed check the output.json file for details"
-}
+# resource "null_resource" "checkov_scan" {
+#   provisioner "local-exec" {
+#     command     = "./checkov_scan.sh"
+#     interpreter = ["bash", "-c"]
+#   }
+#   provisioner "local-exec" {
+#     when    = destroy
+#     command = "rm -f checkov_output.json"
+#   }
+#   triggers = {
+#     always_run = timestamp()
+#   }
+# }
+# output "checkov_scan_status" {
+#   value = "checkov scan completed check the output.json file for details"
+# }
 
 #Create a VPC
 resource "aws_vpc" "vpc" {
@@ -216,7 +216,7 @@ resource "tls_private_key" "key" {
 
 resource "local_file" "key" {
   content         = tls_private_key.key.private_key_pem
-  filename        = "steven-key"
+  filename        = "steven.pem"
   file_permission = "600"
 }
 resource "aws_key_pair" "key" {
@@ -286,7 +286,7 @@ resource "aws_ami_from_instance" "steven-custom_ami" {
 
 resource "time_sleep" "ami-sleep" {
   depends_on      = [aws_instance.wordpress_server]
-  create_duration = "300s"
+  create_duration = "120s"
 }
 
 # Custom Policy with Least Privilege permissions for the role
@@ -328,13 +328,13 @@ resource "aws_iam_instance_profile" "wordpress_instance_profile" {
 
 
 # #insert secret manager here
-resource "aws_secretsmanager_secret" "db_cred1" {
-  name        = "db_cred7"
+resource "aws_secretsmanager_secret" "db_cred9" {
+  name        = "db_cred9"
   description = "Database credentials for the WordPress image-sharing application"
 }
 
 resource "aws_secretsmanager_secret_version" "db_cred_version" {
-  secret_id     = aws_secretsmanager_secret.db_cred1.id
+  secret_id     = aws_secretsmanager_secret.db_cred9.id
   secret_string = jsonencode(var.dbcred1)
 }
 #database
@@ -512,11 +512,14 @@ resource "aws_lb_listener" "wordpress-https_listener" {
   load_balancer_arn = aws_lb.wordpress_alb.arn
   port              = 443
   protocol          = "HTTPS"
+  ssl_policy        = "ELBSecurityPolicy-2016-08"
+  certificate_arn = aws_acm_certificate.steven_cert.arn
 
   default_action {
     type             = "forward"
     target_group_arn = aws_lb_target_group.wordpress-https_tg.arn
   }
+  
 }
 #creat another target group listener for https 
 
@@ -582,23 +585,23 @@ resource "aws_s3_bucket_policy" "log-policy" {
 }
 
 # #create media policy. Anyone on the internet should be able to read/download files.
-resource "aws_s3_bucket_policy" "media-policy" {
-  bucket = aws_s3_bucket.media-bucket.id
-  policy = jsonencode({
-    Version = "2012-10-17",
-    Statement = [
-      {
-        Sid = "AllowPublicReadForMedia",
-        Effect = "Allow",
-        Principal = "*",
-        Action = "s3:GetObject",
-        Resource = "arn:aws:s3:::${aws_s3_bucket.media.id}/*"
-      }
-    ]
-  })
-}
+# resource "aws_s3_bucket_policy" "media-policy" {
+#   bucket = aws_s3_bucket.media-bucket.id
+#   policy = jsonencode({
+#     Version = "2012-10-17",
+#     Statement = [
+#       {
+#         Sid = "AllowPublicReadForMedia",
+#         Effect = "Allow",
+#         Principal = "*",
+#         Action = "s3:GetObject",
+#         Resource = "arn:aws:s3:::${aws_s3_bucket.media-bucket.id}/*"
+#       }
+#     ]
+#   })
+# }
 
-# data "aws_caller_identity" "current" {}
+data "aws_caller_identity" "current" {}
 #create code policy. Ensure only users/roles from the AWS account can access this bucket.
 resource "aws_s3_bucket_policy" "code_policy" {
   bucket = aws_s3_bucket.code-bucket.id
@@ -614,7 +617,7 @@ resource "aws_s3_bucket_policy" "code_policy" {
         },
         Action = "s3:*",
         Resource = [
-          "arn:aws:s3:::${aws_s3_bucket.code.id}/*"
+          "arn:aws:s3:::${aws_s3_bucket.code-bucket.id}/*"
         ]
       }
     ]
@@ -623,7 +626,7 @@ resource "aws_s3_bucket_policy" "code_policy" {
 
 # # Bucket 1: For Logs
 resource "aws_s3_bucket" "logs_bucket" {
-  bucket = "steven-logs-bucket"
+  bucket = "steven-logs23498ww"
 
   tags = {
     Name        = "steven-logs"
@@ -654,30 +657,39 @@ resource "aws_s3_bucket" "media-bucket" {
   }
 }
 
+# resource "aws_s3_bucket_public_access_block" "media-bucket-public-access" {
+#   bucket                  = aws_s3_bucket.media-bucket.id
+#   block_public_acls       = false
+#   block_public_policy     = false
+#   ignore_public_acls      = false
+#   restrict_public_buckets = false
+# }
+
+
 
 #Cloudwatch dashboard
-resource "aws_cloudwatch_dashboard" "steven_dashboard" {
-  dashboard_name = "steven-Infra-Dashboard"
-  dashboard_body = jsonencode({
-    widgets = [
-      {
-        type = "metric",
-        x    = 0,
-        y    = 0,
-        width = 6,
-        height = 6,
-        properties = {
-          metrics = [
-            [ "AWS/EC2", "CPUUtilization", "AutoScalingGroupName", aws_autoscaling_group.steven-auto-scaling-group.name ]
-          ],
-          period = 300,
-          stat   = "Average",
-          title  = "CPU Utilization"
-        }
-      }
-    ]
-  })
-}
+# resource "aws_cloudwatch_dashboard" "steven_dashboard" {
+#   dashboard_name = "steven-Infra-Dashboard"
+#   dashboard_body = jsonencode({
+#     widgets = [
+#       {
+#         type = "metric",
+#         x    = 0,
+#         y    = 0,
+#         width = 6,
+#         height = 6,
+#         properties = {
+#           metrics = [
+#             [ "AWS/EC2", "CPUUtilization", "AutoScalingGroupName", aws_autoscaling_group.steven-auto-scaling-group.name ]
+#           ],
+#           period = 300,
+#           stat   = "Average",
+#           title  = "CPU Utilization"
+#         }
+#       }
+#     ]
+#   })
+# }
 
 # Create SNS Topic
 resource "aws_sns_topic" "alert_topic" {
@@ -723,4 +735,30 @@ resource "aws_route53_record" "steven_zone_record" {
     zone_id                = aws_lb.wordpress_alb.zone_id
     evaluate_target_health = true
   }
+}
+
+resource "aws_acm_certificate" "steven_cert" {
+  domain_name       = "steven12.space"
+  validation_method = "DNS"
+}
+
+resource "aws_route53_record" "validate-record" {
+  for_each = {
+    for dvo in aws_acm_certificate.steven_cert.domain_validation_options : dvo.domain_name => {
+      name   = dvo.resource_record_name
+      record = dvo.resource_record_value
+      type   = dvo.resource_record_type
+    }
+  }
+
+  allow_overwrite = true
+  name            = each.value.name
+  records         = [each.value.record]
+  ttl             = 60
+  type            = each.value.type
+  zone_id         = data.aws_route53_zone.steven_zone.zone_id
+}
+resource "aws_acm_certificate_validation" "cert-validation" {
+  certificate_arn         = aws_acm_certificate.steven_cert.arn
+  validation_record_fqdns = [for record in aws_route53_record.validate-record : record.fqdn]
 }

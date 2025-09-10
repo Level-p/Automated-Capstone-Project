@@ -33,7 +33,9 @@ sudo sed -i  -e '154aAllowOverride All' -e '154d' /etc/httpd/conf/httpd.conf
 cat <<EOT > /var/www/html/.htaccess
 Options +FollowSymlinks
 RewriteEngine on
-RewriteRule ^wp-content/uploads/(.*)$ https://${data.aws_cloudfront_distribution.cloudfront.domain_name}/$1 [r=301,nc]
+
+
+
 # BEGIN WordPress
 # END WordPress
 EOT
@@ -48,3 +50,5 @@ sudo sed -i 's/^SELINUX=enforcing/SELINUX=permissive/' /etc/selinux/config
 sudo hostnamectl set-hostname webserver
 EOF
 }
+
+# RewriteRule ^wp-content/uploads/(.*)$ https://${data.aws_cloudfront_distribution.cloudfront.domain_name}/$1 [r=301,nc]
